@@ -4,8 +4,8 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::{DeepLinkExt, OpenUrlEvent};
 use url::Url;
 
-/// secureexam://quiz?x=1           →  <base>/quiz?x=1
-/// secureexam://results/987?y=true →  <base>/results/987?y=true
+/// understandly_lockdown://quiz?x=1           →  <base>/quiz?x=1
+/// understandly_lockdown://results/987?y=true →  <base>/results/987?y=true
 fn to_local(link: &Url, base: &str) -> String {
     let mut target = String::from(base.trim_end_matches('/'));
 
@@ -35,15 +35,16 @@ fn to_local(link: &Url, base: &str) -> String {
 
 fn main() {
     // ── customizable base URL ───────────────────────────────────────────────
-    // Set SECUREEXAM_BASE env var at build-time or run-time; falls back to localhost.
-    let base = std::env::var("SECUREEXAM_BASE").unwrap_or_else(|_| "http://localhost:3000".into());
+    // Set UNDERSTANDLY_LOCKDOWN_BASE env var at build-time or run-time; falls back to localhost.
+    let base = std::env::var("UNDERSTANDLY_LOCKDOWN_BASE")
+        .unwrap_or_else(|_| "http://localhost:3000".into());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             let dl = app.deep_link();
 
-            // ── cold-start: was launched via secureexam://… ? ─────────────────
+            // ── cold-start: was launched via understandly_lockdown://… ? ─────────────────
             let entry = dl
                 .get_current() // Result<Option<Vec<Url>>, _>
                 .ok()
@@ -53,7 +54,7 @@ fn main() {
 
             WebviewWindowBuilder::new(app, "main", entry)
                 .fullscreen(true)
-                .title("SecureExam")
+                .title("Understandly Lockdown")
                 .build()?;
 
             // ── already-running instance receives a new deep-link ────────────
@@ -73,5 +74,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running SecureExam");
+        .expect("error while running Understandly Lockdown");
 }
