@@ -1,0 +1,40 @@
+{
+    "$schema": "https://schema.tauri.app/config/2.6.2",
+    "identifier": "com.example.understandly_lockdown",
+    "productName": "SecureExam",
+    "version": "0.1.0",
+    "build": {
+        "frontendDist": "empty",
+        "devUrl": "http://localhost:3000"
+    },
+    "plugins": {
+        "deep-link": {
+            "desktop": {
+                "schemes": [
+                    "understandly_lockdown"
+                ]
+            }
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": [
+            "msi",
+            "nsis"
+        ],
+        "category": "Education",
+        "shortDescription": "Secure Exam Browser",
+        "longDescription": "A secure exam browser that prevents cheating during online exams",
+        "icon": [
+            "icons/icon.ico"
+        ],
+        "windows": {
+            "wix": {
+                "language": "en-US"
+            },
+            "webviewInstallMode": {
+                "type": "embedBootstrapper"
+            }
+        }
+    }
+}
