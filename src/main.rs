@@ -4,6 +4,11 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::{DeepLinkExt, OpenUrlEvent};
 use url::Url;
 
+#[tauri::command]
+fn close_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 /// understandly_lockdown://quiz?x=1           →  <base>/quiz?x=1
 /// understandly_lockdown://results/987?y=true →  <base>/results/987?y=true
 fn to_local(link: &Url, base: &str) -> String {
@@ -41,6 +46,7 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_process::init())
         .setup(move |app| {
             let dl = app.deep_link();
 
@@ -73,6 +79,12 @@ fn main() {
 
             Ok(())
         })
+        .on_window_event(|_window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+            }
+        })
+        .invoke_handler(tauri::generate_handler![close_app])
         .run(tauri::generate_context!())
         .expect("error while running Understandly Lockdown");
 }

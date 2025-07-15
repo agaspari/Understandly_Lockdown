@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2.6.2",
-    "identifier": "com.example.understandly_lockdown",
+    "identifier": "com.example.understandly-lockdown",
     "productName": "Understandly Lockdown",
     "version": "0.1.0",
     "build": {
@@ -11,7 +11,7 @@
         "deep-link": {
             "desktop": {
                 "schemes": [
-                    "understandly_lockdown"
+                    "understandly-lockdown"
                 ]
             }
         }
@@ -24,17 +24,38 @@
         ],
         "category": "Education",
         "shortDescription": "Secure Exam Browser",
-        "longDescription": "A secure exam browser that prevents cheating during online exams",
+        "longDescription": "A secure browser for online examinations",
         "icon": [
             "icons/icon.ico"
-        ],
-        "windows": {
-            "wix": {
-                "language": "en-US"
+        ]
+    },
+    "app": {
+        "security": {
+            "csp": {
+                "default-src": "'self' http://localhost:3000 https://understandly.com",
+                "connect-src": "ipc: http://ipc.localhost http://localhost:3000 https://understandly.com ws://localhost:3000 wss://understandly.com",
+                "font-src": "'self' data: https://fonts.gstatic.com",
+                "img-src": "'self' data: blob: http://localhost:3000 https://understandly.com",
+                "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "script-src": "'self' 'wasm-unsafe-eval'"
             },
-            "webviewInstallMode": {
-                "type": "embedBootstrapper"
-            }
+            "headers": {
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp"
+            },
+            "capabilities": [
+                {
+                    "identifier": "main-capability",
+                    "description": "Capability for the main window with core permissions",
+                    "windows": [
+                        "main"
+                    ],
+                    "permissions": [
+                        "core:default",
+                        "process:allow-exit"
+                    ]
+                }
+            ]
         }
     }
 }
