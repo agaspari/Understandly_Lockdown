@@ -1,20 +1,47 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde::Deserialize;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::{DeepLinkExt, OpenUrlEvent};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use url::Url;
+
+#[derive(Deserialize)]
+struct WindowConfig {
+    title: String,
+    fullscreen: bool,
+    always_on_top: bool,
+    skip_taskbar: bool,
+}
+
+#[derive(Deserialize)]
+struct DebugConfig {
+    enable_emergency_exit: bool,
+}
+
+#[derive(Deserialize)]
+struct LockdownConfig {
+    base_url: String,
+    production_url: String,
+    window: WindowConfig,
+    debug_settings: DebugConfig,
+}
+
+impl LockdownConfig {
+    fn load() -> Self {
+        let config_str = include_str!("../lockdown.config.json");
+        serde_json::from_str(config_str).expect("Invalid lockdown.config.json")
+    }
+}
 
 #[tauri::command]
 fn close_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
-/// understandly_lockdown://quiz?x=1           →  <base>/quiz?x=1
-/// understandly_lockdown://results/987?y=true →  <base>/results/987?y=true
 fn to_local(link: &Url, base: &str) -> String {
     let mut target = String::from(base.trim_end_matches('/'));
 
-    // Treat the "host" part (everything before the first slash) as the first path segment
     if let Some(host) = link.host_str() {
         if !host.is_empty() {
             target.push('/');
@@ -22,14 +49,12 @@ fn to_local(link: &Url, base: &str) -> String {
         }
     }
 
-    // Append the regular path
     let path = link.path().trim_start_matches('/');
     if !path.is_empty() {
         target.push('/');
         target.push_str(path);
     }
 
-    // Keep query string
     if let Some(q) = link.query() {
         target.push('?');
         target.push_str(q);
@@ -39,33 +64,68 @@ fn to_local(link: &Url, base: &str) -> String {
 }
 
 fn main() {
-    // ── customizable base URL ───────────────────────────────────────────────
-    // Set UNDERSTANDLY_LOCKDOWN_BASE env var at build-time or run-time; falls back to localhost.
-    let base = std::env::var("UNDERSTANDLY_LOCKDOWN_BASE")
-        .unwrap_or_else(|_| "http://localhost:3000".into());
+    let config = LockdownConfig::load();
+
+    let base_url = if cfg!(debug_assertions) {
+        config.base_url.clone()
+    } else {
+        config.production_url.clone()
+    };
+
+    let enable_emergency_exit =
+        config.debug_settings.enable_emergency_exit || cfg!(debug_assertions);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(move |app| {
+            // Register emergency exit shortcut if enabled
+            if enable_emergency_exit {
+                println!("DEBUG MODE: Emergency exit enabled!");
+                println!("Press Ctrl+Alt+Shift+Q to exit");
+
+                let app_handle_exit = app.handle().clone();
+
+                // Register Ctrl+Alt+Shift+Q
+                let shortcut = Shortcut::new(
+                    Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT),
+                    Code::KeyQ,
+                );
+
+                let _ =
+                    app.global_shortcut()
+                        .on_shortcut(shortcut, move |_app, _shortcut, event| {
+                            if event.state == ShortcutState::Pressed {
+                                println!("Emergency exit triggered!");
+                                app_handle_exit.exit(0);
+                            }
+                        });
+            }
+
             let dl = app.deep_link();
 
-            // ── cold-start: was launched via understandly_lockdown://… ? ─────────────────
             let entry = dl
-                .get_current() // Result<Option<Vec<Url>>, _>
+                .get_current()
                 .ok()
                 .and_then(|opt| opt.and_then(|v| v.into_iter().next()))
-                .map(|u| WebviewUrl::External(Url::parse(&to_local(&u, &base)).unwrap()))
-                .unwrap_or_else(|| WebviewUrl::External(Url::parse(&base).unwrap()));
+                .map(|u| WebviewUrl::External(Url::parse(&to_local(&u, &base_url)).unwrap()))
+                .unwrap_or_else(|| WebviewUrl::External(Url::parse(&base_url).unwrap()));
 
             WebviewWindowBuilder::new(app, "main", entry)
-                .fullscreen(true)
-                .title("Understandly Lockdown")
+                .fullscreen(config.window.fullscreen)
+                .title(&config.window.title)
+                .always_on_top(config.window.always_on_top)
+                .skip_taskbar(config.window.skip_taskbar)
+                .decorations(false)
+                .resizable(false)
+                .maximizable(false)
+                .minimizable(false)
+                .closable(false)
                 .build()?;
 
-            // ── already-running instance receives a new deep-link ────────────
-            let app_handle: AppHandle = app.handle().clone(); // Send + Sync
-            let base_clone = base.clone();
+            let app_handle: AppHandle = app.handle().clone();
+            let base_clone = base_url.clone();
             dl.on_open_url(move |evt: OpenUrlEvent| {
                 if let Some(u) = evt.urls().first() {
                     if let Some(win) = app_handle.get_webview_window("main") {
@@ -83,8 +143,11 @@ fn main() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
             }
+            if let tauri::WindowEvent::Focused(false) = event {
+                let _ = _window.set_focus();
+            }
         })
         .invoke_handler(tauri::generate_handler![close_app])
         .run(tauri::generate_context!())
-        .expect("error while running Understandly Lockdown");
+        .expect("error while running lockdown browser");
 }

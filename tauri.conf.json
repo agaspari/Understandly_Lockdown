@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2.6.2",
-    "identifier": "com.example.understandly-lockdown",
+    "identifier": "com.understandly.lockdown",
     "productName": "Understandly Lockdown",
     "version": "0.1.0",
     "build": {
@@ -31,18 +31,6 @@
     },
     "app": {
         "security": {
-            "csp": {
-                "default-src": "'self' http://localhost:3000 https://understandly.com",
-                "connect-src": "ipc: http://ipc.localhost http://localhost:3000 https://understandly.com ws://localhost:3000 wss://understandly.com",
-                "font-src": "'self' data: https://fonts.gstatic.com",
-                "img-src": "'self' data: blob: http://localhost:3000 https://understandly.com",
-                "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
-                "script-src": "'self' 'wasm-unsafe-eval'"
-            },
-            "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin",
-                "Cross-Origin-Embedder-Policy": "require-corp"
-            },
             "capabilities": [
                 {
                     "identifier": "main-capability",
@@ -52,7 +40,10 @@
                     ],
                     "permissions": [
                         "core:default",
-                        "process:allow-exit"
+                        "process:allow-exit",
+                        "global-shortcut:allow-is-registered",
+                        "global-shortcut:allow-register",
+                        "global-shortcut:allow-unregister"
                     ]
                 }
             ]
