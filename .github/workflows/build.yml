@@ -18,7 +18,7 @@ jobs:
         run: cargo install tauri-cli
       
       - name: Build macOS
-        run: cargo tauri build
+        run: cargo tauri build --bundles dmg
         working-directory: ./
       
       - name: Upload DMG
@@ -39,7 +39,7 @@ jobs:
         run: cargo install tauri-cli
       
       - name: Build Windows
-        run: cargo tauri build
+        run: cargo tauri build --bundles nsis,msi
         working-directory: ./
       
       - name: Upload NSIS Installer
