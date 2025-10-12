@@ -53,18 +53,6 @@
         }
     },
     "app": {
-        "windows": [
-            {
-                "title": "Understandly Lockdown",
-                "width": 1280,
-                "height": 800,
-                "fullscreen": false,
-                "resizable": true,
-                "decorations": false,
-                "alwaysOnTop": false,
-                "center": true
-            }
-        ],
         "security": {
             "csp": null,
             "capabilities": [
