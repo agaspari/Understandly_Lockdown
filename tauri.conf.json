@@ -20,17 +20,53 @@
         "active": true,
         "targets": [
             "msi",
-            "nsis"
+            "nsis",
+            "dmg",
+            "app"
         ],
         "category": "Education",
         "shortDescription": "Secure Exam Browser",
-        "longDescription": "A secure browser for online examinations",
+        "longDescription": "A secure browser for online examinations and quizzes",
         "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
             "icons/icon.ico"
-        ]
+        ],
+        "windows": {
+            "certificateThumbprint": null,
+            "digestAlgorithm": "sha256",
+            "timestampUrl": ""
+        },
+        "macOS": {
+            "minimumSystemVersion": "10.15",
+            "exceptionDomain": "",
+            "frameworks": [],
+            "providerShortName": null,
+            "signingIdentity": null
+        },
+        "linux": {
+            "deb": {
+                "depends": []
+            }
+        }
     },
     "app": {
+        "windows": [
+            {
+                "title": "Understandly Lockdown",
+                "width": 1280,
+                "height": 800,
+                "fullscreen": false,
+                "resizable": true,
+                "decorations": false,
+                "alwaysOnTop": false,
+                "center": true
+            }
+        ],
         "security": {
+            "csp": null,
             "capabilities": [
                 {
                     "identifier": "main-capability",
@@ -40,6 +76,10 @@
                     ],
                     "permissions": [
                         "core:default",
+                        "core:window:allow-set-focus",
+                        "core:window:allow-close",
+                        "core:webview:allow-webview-position",
+                        "core:webview:allow-webview-size",
                         "process:allow-exit",
                         "global-shortcut:allow-is-registered",
                         "global-shortcut:allow-register",
