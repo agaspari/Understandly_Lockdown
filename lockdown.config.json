@@ -1,6 +1,6 @@
 {
     "base_url": "http://localhost:3000",
-    "production_url": "https://understandly.com",
+    "production_url": "http://localhost:3000",
     "window": {
         "title": "Understandly Lockdown",
         "fullscreen": true,

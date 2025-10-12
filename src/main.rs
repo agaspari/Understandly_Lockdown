@@ -63,6 +63,11 @@ fn to_local(link: &Url, base: &str) -> String {
     target
 }
 
+#[tauri::command]
+fn close_lockdown() {
+    std::process::exit(0);
+}
+
 fn main() {
     let config = LockdownConfig::load();
 
@@ -147,7 +152,7 @@ fn main() {
                 let _ = _window.set_focus();
             }
         })
-        .invoke_handler(tauri::generate_handler![close_app])
+        .invoke_handler(tauri::generate_handler![close_app, close_lockdown])
         .run(tauri::generate_context!())
         .expect("error while running lockdown browser");
 }
