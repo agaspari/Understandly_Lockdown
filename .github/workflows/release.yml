@@ -70,6 +70,24 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0"
 
+      - name: Debug Secrets
+        shell: bash
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TAURI_PRIVATE_KEY" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is set (length: ${#TAURI_PRIVATE_KEY})"
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY is NOT set"
+          fi
+          
+          if [ -n "$TAURI_KEY_PASSWORD" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD is set (length: ${#TAURI_KEY_PASSWORD})"
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD is NOT set"
+          fi
+
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
