@@ -20,6 +20,9 @@ jobs:
       - name: Build macOS
         run: cargo tauri build --bundles dmg
         working-directory: ./
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
       - name: Upload DMG
         uses: actions/upload-artifact@v4
@@ -41,6 +44,9 @@ jobs:
       - name: Build Windows
         run: cargo tauri build --bundles nsis,msi
         working-directory: ./
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
       - name: Upload NSIS Installer
         uses: actions/upload-artifact@v4
