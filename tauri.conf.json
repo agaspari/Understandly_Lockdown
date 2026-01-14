@@ -45,6 +45,11 @@
             "certificateThumbprint": null,
             "digestAlgorithm": "sha256",
             "timestampUrl": "",
+            "wix": {
+                "fragmentPaths": [
+                    "wix/disable-launch-checkbox.wxs"
+                ]
+            },
             "nsis": {
                 "template": "installer.nsi"
             }
