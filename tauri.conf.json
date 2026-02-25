@@ -58,8 +58,9 @@
             "minimumSystemVersion": "10.15",
             "exceptionDomain": "",
             "frameworks": [],
-            "providerShortName": null,
-            "signingIdentity": null
+            "providerShortName": "697M4VQGC9",
+            "signingIdentity": "Developer ID Application",
+            "entitlements": "Entitlements.plist"
         },
         "linux": {
             "deb": {
