@@ -209,8 +209,8 @@ fn close_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn close_lockdown() {
-    std::process::exit(0);
+fn close_lockdown(app: tauri::AppHandle) {
+    app.exit(0);
 }
 
 /// Check if multiple monitors are connected (for the frontend to react)
