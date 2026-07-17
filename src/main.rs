@@ -116,30 +116,86 @@ fn loading_recovery_script(config: &LoadingRecoveryConfig) -> String {
         document.addEventListener('DOMContentLoaded', function () {{
             var config = window.__UNDERSTANDLY_LOADING_RECOVERY_CONFIG__;
             var button = document.getElementById('loading-exit');
+            var cancelButton = document.getElementById('loading-cancel');
+            var confirmButton = document.getElementById('loading-confirm');
+            var confirmation = document.getElementById('loading-confirmation');
+            var confirmationMessage = document.getElementById('loading-confirmation-message');
+            var status = document.getElementById('loading-status');
             if (!button) return;
+            var buttonLabel = config.button_label || 'Exit setup';
 
-            button.textContent = config.button_label;
-            button.setAttribute('aria-label', config.button_label);
-            button.addEventListener('click', async function () {{
-                if (config.confirmation_message && !window.confirm(config.confirmation_message)) return;
+            var updateButtonState = function (disabled) {{
+                button.textContent = buttonLabel;
+                button.setAttribute('aria-label', buttonLabel);
+                button.disabled = disabled;
+            }};
 
-                button.disabled = true;
-                try {{
-                    await window.__TAURI_INTERNALS__.invoke('close_during_loading');
-                }} catch (error) {{
-                    button.disabled = false;
-                    console.error('[Lockdown] loading exit rejected', error);
+            var hideConfirmation = function () {{
+                if (!confirmation) return;
+                confirmation.dataset.open = 'false';
+                confirmation.setAttribute('aria-hidden', 'true');
+            }};
+
+            var showConfirmation = function () {{
+                if (!confirmation) return false;
+
+                if (confirmationMessage) {{
+                    confirmationMessage.textContent = config.confirmation_message;
                 }}
+
+                confirmation.dataset.open = 'true';
+                confirmation.setAttribute('aria-hidden', 'false');
+                if (cancelButton) {{
+                    cancelButton.focus();
+                }}
+                return true;
+            }};
+
+            updateButtonState(false);
+
+            button.addEventListener('click', function () {{
+                if (config.confirmation_message) {{
+                    if (!showConfirmation()) return;
+                    return;
+                }}
+
+                updateButtonState(true);
+                window.__TAURI_INTERNALS__.invoke('close_during_loading').catch(function (error) {{
+                    updateButtonState(false);
+                    console.error('[Lockdown] loading exit rejected', error);
+                }});
             }});
+
+            if (cancelButton) {{
+                cancelButton.addEventListener('click', hideConfirmation);
+            }}
+
+            if (confirmButton) {{
+                confirmButton.addEventListener('click', function () {{
+                    hideConfirmation();
+                    updateButtonState(true);
+                    window.__TAURI_INTERNALS__.invoke('close_during_loading').catch(function (error) {{
+                        updateButtonState(false);
+                        console.error('[Lockdown] loading exit rejected', error);
+                    }});
+                }});
+            }}
 
             window.__UNDERSTANDLY_LOCKDOWN_UPDATING__ = function () {{
                 button.textContent = 'Updating...';
                 button.disabled = true;
+                if (status) {{
+                    status.textContent = 'An update is being installed before the quiz opens.';
+                }}
+                hideConfirmation();
             }};
 
             window.__UNDERSTANDLY_LOCKDOWN_RESTORE_LOADING__ = function () {{
-                button.textContent = config.button_label;
+                button.textContent = config.button_label || 'Exit setup';
                 button.disabled = false;
+                if (status) {{
+                    status.textContent = 'The quiz has not started yet.';
+                }}
             }};
         }}, {{ once: true }});
         "#

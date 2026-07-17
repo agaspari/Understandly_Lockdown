@@ -5,36 +5,184 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quiz loading</title>
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef2ff;
+      --bg-accent: rgba(79, 70, 229, 0.12);
+      --surface: rgba(255, 255, 255, 0.92);
+      --surface-strong: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: rgba(15, 23, 42, 0.12);
+      --shadow: 0 24px 72px rgba(15, 23, 42, 0.16);
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+    }
     * { box-sizing: border-box; }
     html, body {
       width: 100%;
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #f8fafc;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.16), transparent 32%),
+        linear-gradient(160deg, #f8fafc 0%, var(--bg) 100%);
     }
     body {
       display: grid;
       place-items: center;
-      padding: 6px;
+      padding: 20px;
+    }
+    .shell {
+      width: min(420px, 100%);
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #4f46e5;
+      margin-bottom: 14px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #4f46e5;
+      box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.12);
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+    p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
     }
     button {
-      width: 100%;
-      height: 100%;
       appearance: none;
-      border: 1px solid rgba(15, 23, 42, 0.25);
-      border-radius: 8px;
-      background: #fff;
-      color: #0f172a;
-      font: 600 14px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font: 700 14px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       cursor: pointer;
+      transition: transform 120ms ease, background-color 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
     }
-    button:disabled { cursor: wait; opacity: 0.7; }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.24);
+      outline-offset: 2px;
+    }
+    .primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+    }
+    .primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .secondary {
+      background: rgba(15, 23, 42, 0.06);
+      color: var(--text);
+    }
+    .secondary:hover:not(:disabled) { background: rgba(15, 23, 42, 0.09); }
+    button:disabled { cursor: wait; opacity: 0.65; transform: none; }
+    .fine-print {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .confirm {
+      display: none;
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid rgba(220, 38, 38, 0.18);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.88);
+    }
+    .confirm[data-open="true"] {
+      display: block;
+      animation: fade-in 120ms ease-out;
+    }
+    .confirm-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--danger);
+    }
+    .confirm-message {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .danger {
+      background: var(--danger);
+      color: white;
+    }
+    .danger:hover:not(:disabled) { background: var(--danger-hover); }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 420px) {
+      .shell { padding: 22px; border-radius: 18px; }
+      h1 { font-size: 21px; }
+      .actions, .confirm-actions { flex-direction: column; }
+      button { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
-  <button id="loading-exit" type="button">Exit</button>
+  <main class="shell" aria-labelledby="loading-title">
+    <div class="eyebrow">Understandly Lockdown</div>
+    <h1 id="loading-title">Preparing the quiz environment</h1>
+    <p>The browser is still loading the test. If you need to leave now, use the recovery button below.</p>
+
+    <div class="actions">
+      <button id="loading-exit" class="secondary" type="button">Exit setup</button>
+    </div>
+
+    <div class="confirm" id="loading-confirmation" aria-live="polite" aria-hidden="true">
+      <p class="confirm-title">Confirm exit</p>
+      <p class="confirm-message" id="loading-confirmation-message"></p>
+      <div class="confirm-actions">
+        <button id="loading-cancel" class="secondary" type="button">Cancel</button>
+        <button id="loading-confirm" class="danger" type="button">Close browser</button>
+      </div>
+    </div>
+
+    <div class="fine-print" id="loading-status">The quiz has not started yet.</div>
+  </main>
 </body>
 </html>
