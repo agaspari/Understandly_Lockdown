@@ -466,6 +466,11 @@ fn close_loading_recovery(app: &AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("loading-recovery") {
         window.close().map_err(|error| error.to_string())?;
     }
+    if let Some(main_win) = app.get_webview_window("main") {
+        let _ = main_win.set_position(tauri::Position::Logical(tauri::LogicalPosition::new(0.0, 0.0)));
+        main_win.set_fullscreen(true).map_err(|error| error.to_string())?;
+        let _ = main_win.set_focus();
+    }
     Ok(())
 }
 
@@ -658,9 +663,20 @@ fn main() {
                 .map(WebviewUrl::External)
                 .unwrap_or_else(|| WebviewUrl::External(Url::parse(&base_url).unwrap()));
 
-            let _window = WebviewWindowBuilder::new(app, "main", entry)
+            let primary_monitor = app.primary_monitor().ok().flatten();
+            let (screen_w, screen_h) = if let Some(ref monitor) = primary_monitor {
+                let size = monitor.size();
+                let scale = monitor.scale_factor();
+                (size.width as f64 / scale, size.height as f64 / scale)
+            } else {
+                (1920.0, 1080.0)
+            };
+
+            let sidebar_w = 320.0f64.min(screen_w * 0.2);
+            let main_w = screen_w - sidebar_w;
+
+            let mut main_builder = WebviewWindowBuilder::new(app, "main", entry)
                 .initialization_script(INIT_SCRIPT)
-                .fullscreen(config.window.fullscreen)
                 .title(&config.window.title)
                 .always_on_top(config.window.always_on_top)
                 .skip_taskbar(config.window.skip_taskbar)
@@ -668,8 +684,19 @@ fn main() {
                 .resizable(false)
                 .maximizable(false)
                 .minimizable(false)
-                .closable(false)
-                .build()?;
+                .closable(false);
+
+            if loading_recovery_enabled {
+                main_builder = main_builder
+                    .fullscreen(false)
+                    .position(sidebar_w, 0.0)
+                    .inner_size(main_w, screen_h);
+            } else {
+                main_builder = main_builder
+                    .fullscreen(config.window.fullscreen);
+            }
+
+            let _window = main_builder.build()?;
 
             if loading_recovery_enabled {
                 let recovery_window = WebviewWindowBuilder::new(
@@ -679,8 +706,8 @@ fn main() {
                 )
                 .initialization_script(&loading_recovery_init_script)
                 .title("Quiz loading")
-                .inner_size(120.0, 56.0)
-                .position(16.0, 16.0)
+                .position(0.0, 0.0)
+                .inner_size(sidebar_w, screen_h)
                 .always_on_top(true)
                 .skip_taskbar(true)
                 .decorations(false)
@@ -690,7 +717,7 @@ fn main() {
                 .focused(false)
                 .build()?;
 
-                // The remote page can become ready while this small local
+                // The remote page can become ready while this local
                 // window is being created. Close it immediately if that race
                 // occurred.
                 if quiz_state.is_ready() {
