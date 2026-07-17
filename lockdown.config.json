@@ -1,5 +1,5 @@
 {
-    "base_url": "http://localhost:3000",
+    "base_url": "https://understandly-git-development-understandly.vercel.app",
     "production_url": "https://www.understandly.com",
     "window": {
         "title": "Understandly Lockdown",
@@ -7,7 +7,9 @@
         "always_on_top": true,
         "skip_taskbar": true
     },
-    "debug_settings": {
-        "enable_emergency_exit": true
+    "loading_recovery": {
+        "enabled": true,
+        "button_label": "Exit",
+        "confirmation_message": "The quiz is still loading. Close the lockdown browser?"
     }
 }

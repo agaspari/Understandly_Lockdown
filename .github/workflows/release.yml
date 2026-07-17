@@ -62,11 +62,8 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Install dependencies (macOS only)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          rustup target add aarch64-apple-darwin
-          rustup target add x86_64-apple-darwin
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Import Apple Developer Certificate
         if: matrix.platform == 'macos-latest'
@@ -104,9 +101,6 @@ jobs:
           base64 --decode -i key-base64.txt -o ~/private_keys/AuthKey_7QAXT75H43.p8 || base64 -D -i key-base64.txt -o ~/private_keys/AuthKey_7QAXT75H43.p8 || openssl base64 -d -A -in key-base64.txt -out ~/private_keys/AuthKey_7QAXT75H43.p8
           rm key-base64.txt
           echo "APPLE_API_KEY_PATH=$HOME/private_keys/AuthKey_7QAXT75H43.p8" >> $GITHUB_ENV
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0.0"
 
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-check-multiple-monitors"
+description = "Enables the check_multiple_monitors command without any pre-configured scope."
+commands.allow = ["check_multiple_monitors"]
+
+[[permission]]
+identifier = "deny-check-multiple-monitors"
+description = "Denies the check_multiple_monitors command without any pre-configured scope."
+commands.deny = ["check_multiple_monitors"]

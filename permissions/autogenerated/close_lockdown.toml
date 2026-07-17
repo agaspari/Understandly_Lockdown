@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-close-lockdown"
+description = "Enables the close_lockdown command without any pre-configured scope."
+commands.allow = ["close_lockdown"]
+
+[[permission]]
+identifier = "deny-close-lockdown"
+description = "Denies the close_lockdown command without any pre-configured scope."
+commands.deny = ["close_lockdown"]

@@ -1,8 +1,8 @@
 {
-    "$schema": "https://schema.tauri.app/config/2.6.2",
+    "$schema": "https://schema.tauri.app/config/2",
     "identifier": "com.understandly.lockdown",
     "productName": "Understandly Lockdown",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "build": {
         "frontendDist": "empty",
         "devUrl": "http://localhost:3000"
@@ -70,10 +70,10 @@
     "app": {
         "security": {
             "csp": {
-                "default-src": "'self' https://understandly.com https://*.understandly.com",
-                "connect-src": "ipc: http://ipc.localhost https://understandly.com https://*.understandly.com wss://understandly.com wss://*.understandly.com",
+                "default-src": "'self' https://understandly.com https://*.understandly.com https://understandly-git-development-understandly.vercel.app",
+                "connect-src": "ipc: http://ipc.localhost https://understandly.com https://*.understandly.com https://understandly-git-development-understandly.vercel.app wss://understandly.com wss://*.understandly.com",
                 "font-src": "'self' data: https://fonts.gstatic.com",
-                "img-src": "'self' data: blob: https://understandly.com https://*.understandly.com",
+                "img-src": "'self' data: blob: https://understandly.com https://*.understandly.com https://understandly-git-development-understandly.vercel.app",
                 "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "script-src": "'self' 'wasm-unsafe-eval'"
             },
@@ -89,16 +89,40 @@
                         "main"
                     ],
                     "permissions": [
-                        "core:default",
-                        "core:window:allow-set-focus",
-                        "core:window:allow-close",
-                        "core:webview:allow-webview-position",
-                        "core:webview:allow-webview-size",
-                        "process:allow-exit",
-                        "global-shortcut:allow-is-registered",
-                        "global-shortcut:allow-register",
-                        "global-shortcut:allow-unregister",
-                        "updater:default"
+                        "core:default"
+                    ]
+                },
+                {
+                    "identifier": "loading-recovery-capability",
+                    "description": "Allows the local loading recovery window to close before a quiz starts",
+                    "windows": [
+                        "loading-recovery"
+                    ],
+                    "permissions": [
+                        "allow-close-during-loading"
+                    ]
+                },
+                {
+                    "identifier": "hosted-exam-capability",
+                    "description": "Narrow command access for the configured hosted exam application",
+                    "local": false,
+                    "remote": {
+                        "urls": [
+                            "http://localhost:3000",
+                            "https://understandly.com",
+                            "https://www.understandly.com",
+                            "https://understandly-git-development-understandly.vercel.app"
+                        ]
+                    },
+                    "windows": [
+                        "main"
+                    ],
+                    "permissions": [
+                        "allow-close-app",
+                        "allow-close-lockdown",
+                        "allow-mark-quiz-ready",
+                        "allow-check-multiple-monitors",
+                        "allow-get-monitor-count"
                     ]
                 }
             ]
