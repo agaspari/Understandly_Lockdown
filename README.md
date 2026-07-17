@@ -60,7 +60,7 @@ cargo tauri build   # production bundle against production_url
 
 All builds provide a native **emergency exit** shortcut: `Ctrl+Alt+Shift+Q`. It is intentionally independent of the hosted page and network so a parent can always recover from a failed or frozen session.
 
-Auto-update: on launch the app checks the updater endpoint in the background. Available updates are deferred; the app never installs or restarts while lockdown is active.
+Auto-update: release builds check for signed updates during the pre-quiz loading phase. If an update is available, it installs and restarts before the quiz becomes active. A failed or timed-out check releases the quiz normally, and debug builds never replace themselves.
 
 ## Custom Configuration
 
@@ -94,8 +94,8 @@ Application metadata and security:
 
 ## Releases (CI/CD)
 
-- **CI** (`.github/workflows/ci.yml`): every push/PR is format-checked, linted (clippy), and built on Windows and macOS.
-- **Release** (`.github/workflows/release.yml`): pushing a tag like `v0.3.0` builds signed installers (NSIS for Windows, DMG for macOS aarch64 + x86_64), creates a GitHub release, and publishes the updater manifest (`latest.json`).
+- **CI** (`.github/workflows/ci.yml`): every push/PR is format-checked, linted (clippy), and built on Windows and macOS, with an additional Windows ARM64 cross-build.
+- **Release** (`.github/workflows/release.yml`): pushing a tag like `v0.3.0` builds signed installers (NSIS for Windows x64 + ARM64, DMG for macOS aarch64 + x86_64), creates a GitHub release, and publishes the updater manifest (`latest.json`).
 
 Before tagging, bump `version` in both `Cargo.toml` and `tauri.conf.json` to match the tag — the auto-updater compares against these.
 

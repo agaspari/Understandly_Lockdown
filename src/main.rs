@@ -1,10 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::{AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::{DeepLinkExt, OpenUrlEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
@@ -133,14 +131,49 @@ fn loading_recovery_script(config: &LoadingRecoveryConfig) -> String {
                     console.error('[Lockdown] loading exit rejected', error);
                 }}
             }});
+
+            window.__UNDERSTANDLY_LOCKDOWN_UPDATING__ = function () {{
+                button.textContent = 'Updating...';
+                button.disabled = true;
+            }};
+
+            window.__UNDERSTANDLY_LOCKDOWN_RESTORE_LOADING__ = function () {{
+                button.textContent = config.button_label;
+                button.disabled = false;
+            }};
         }}, {{ once: true }});
         "#
     )
 }
 
-#[derive(Default)]
+enum QuizPhase {
+    CheckingUpdate { ready_requested: bool },
+    Loading,
+    Ready,
+    Updating { ready_requested: bool },
+}
+
 struct QuizSessionState {
-    ready: AtomicBool,
+    phase: Mutex<QuizPhase>,
+}
+
+impl QuizSessionState {
+    fn new(check_updates: bool) -> Self {
+        let phase = if check_updates {
+            QuizPhase::CheckingUpdate {
+                ready_requested: false,
+            }
+        } else {
+            QuizPhase::Loading
+        };
+        Self {
+            phase: Mutex::new(phase),
+        }
+    }
+
+    fn is_ready(&self) -> bool {
+        matches!(*self.phase.lock().unwrap(), QuizPhase::Ready)
+    }
 }
 
 // ============================================================================
@@ -315,8 +348,14 @@ fn close_during_loading(
     app: AppHandle,
     state: State<'_, Arc<QuizSessionState>>,
 ) -> Result<(), String> {
-    if state.ready.load(Ordering::Acquire) {
-        return Err("the quiz is active; use the quiz close flow".into());
+    match *state.phase.lock().unwrap() {
+        QuizPhase::Loading | QuizPhase::CheckingUpdate { .. } => {}
+        QuizPhase::Ready => {
+            return Err("the quiz is active; use the quiz close flow".into());
+        }
+        QuizPhase::Updating { .. } => {
+            return Err("an application update is being installed".into());
+        }
     }
 
     app.exit(0);
@@ -325,9 +364,24 @@ fn close_during_loading(
 
 #[tauri::command]
 fn mark_quiz_ready(app: AppHandle, state: State<'_, Arc<QuizSessionState>>) -> Result<(), String> {
-    state.ready.store(true, Ordering::Release);
-    if let Some(window) = app.get_webview_window("loading-recovery") {
-        window.close().map_err(|error| error.to_string())?;
+    let close_recovery = {
+        let mut phase = state.phase.lock().unwrap();
+        match &mut *phase {
+            QuizPhase::CheckingUpdate { ready_requested }
+            | QuizPhase::Updating { ready_requested } => {
+                *ready_requested = true;
+                false
+            }
+            QuizPhase::Loading => {
+                *phase = QuizPhase::Ready;
+                true
+            }
+            QuizPhase::Ready => true,
+        }
+    };
+
+    if close_recovery {
+        close_loading_recovery(&app)?;
     }
     Ok(())
 }
@@ -352,13 +406,108 @@ fn get_monitor_count(app: AppHandle) -> usize {
 // Auto-Updater
 // ============================================================================
 
-async fn check_for_updates(app: AppHandle) -> tauri_plugin_updater::Result<()> {
-    let updater = app.updater()?;
-    if let Some(update) = updater.check().await? {
-        println!("[Lockdown] update {} available", update.version);
-        println!("[Lockdown] update deferred until lockdown has ended");
+fn close_loading_recovery(app: &AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("loading-recovery") {
+        window.close().map_err(|error| error.to_string())?;
     }
     Ok(())
+}
+
+fn set_loading_recovery_updating(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("loading-recovery") {
+        let _ = window.eval("window.__UNDERSTANDLY_LOCKDOWN_UPDATING__?.();");
+    }
+}
+
+fn restore_loading_recovery(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("loading-recovery") {
+        let _ = window.eval("window.__UNDERSTANDLY_LOCKDOWN_RESTORE_LOADING__?.();");
+    }
+}
+
+fn finish_update_check(app: &AppHandle, state: &QuizSessionState) {
+    let ready_requested = {
+        let mut phase = state.phase.lock().unwrap();
+        match &*phase {
+            QuizPhase::CheckingUpdate { ready_requested }
+            | QuizPhase::Updating { ready_requested } => {
+                let requested = *ready_requested;
+                *phase = if requested {
+                    QuizPhase::Ready
+                } else {
+                    QuizPhase::Loading
+                };
+                requested
+            }
+            QuizPhase::Loading | QuizPhase::Ready => false,
+        }
+    };
+
+    if ready_requested {
+        let _ = close_loading_recovery(app);
+    } else {
+        restore_loading_recovery(app);
+    }
+}
+
+async fn check_for_updates(
+    app: AppHandle,
+    state: Arc<QuizSessionState>,
+) -> tauri_plugin_updater::Result<()> {
+    let check_result = app
+        .updater_builder()
+        // This timeout also covers the installer download. Keep it bounded so a
+        // failed update cannot hold the loading screen indefinitely, while
+        // allowing normal home connections enough time to fetch the bundle.
+        .timeout(Duration::from_secs(60))
+        .build()?
+        .check()
+        .await;
+
+    let update = match check_result {
+        Ok(Some(update)) => update,
+        Ok(None) => {
+            finish_update_check(&app, &state);
+            return Ok(());
+        }
+        Err(error) => {
+            finish_update_check(&app, &state);
+            return Err(error);
+        }
+    };
+
+    let install_update = {
+        let mut phase = state.phase.lock().unwrap();
+        match &*phase {
+            QuizPhase::CheckingUpdate { ready_requested } => {
+                let requested = *ready_requested;
+                *phase = QuizPhase::Updating {
+                    ready_requested: requested,
+                };
+                true
+            }
+            QuizPhase::Loading | QuizPhase::Ready | QuizPhase::Updating { .. } => false,
+        }
+    };
+
+    if !install_update {
+        println!(
+            "[Lockdown] update {} deferred because the quiz is active",
+            update.version
+        );
+        return Ok(());
+    }
+
+    println!("[Lockdown] installing update {}", update.version);
+    set_loading_recovery_updating(&app);
+
+    if let Err(error) = update.download_and_install(|_, _| {}, || {}).await {
+        finish_update_check(&app, &state);
+        return Err(error);
+    }
+
+    println!("[Lockdown] update installed; restarting");
+    app.restart();
 }
 
 // ============================================================================
@@ -405,7 +554,8 @@ fn main() {
     };
     let loading_recovery_enabled = config.loading_recovery.enabled;
     let loading_recovery_init_script = loading_recovery_script(&config.loading_recovery);
-    let quiz_state = Arc::new(QuizSessionState::default());
+    let auto_update_enabled = !cfg!(debug_assertions);
+    let quiz_state = Arc::new(QuizSessionState::new(auto_update_enabled));
 
     tauri::Builder::default()
         .manage(Arc::clone(&quiz_state))
@@ -487,7 +637,7 @@ fn main() {
                 // The remote page can become ready while this small local
                 // window is being created. Close it immediately if that race
                 // occurred.
-                if quiz_state.ready.load(Ordering::Acquire) {
+                if quiz_state.is_ready() {
                     let _ = recovery_window.close();
                 }
             }
@@ -504,14 +654,17 @@ fn main() {
             #[cfg(target_os = "macos")]
             macos_security::enable_kiosk_mode();
 
-            // Check in the background, but never install or restart while a
-            // lockdown session is active.
-            let updater_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = check_for_updates(updater_handle).await {
-                    eprintln!("[Lockdown] update check failed: {e}");
-                }
-            });
+            // Release builds check and install only while the app owns the
+            // pre-quiz loading phase. Debug builds never replace themselves.
+            if auto_update_enabled {
+                let updater_handle = app.handle().clone();
+                let updater_state = Arc::clone(&quiz_state);
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = check_for_updates(updater_handle, updater_state).await {
+                        eprintln!("[Lockdown] update check failed: {e}");
+                    }
+                });
+            }
 
             // Handle deep-links for the already-running instance
             let app_handle: AppHandle = app.handle().clone();

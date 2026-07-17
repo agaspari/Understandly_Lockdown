@@ -30,5 +30,5 @@ content (app switching, screenshots, clipboard, DevTools).
 
 - macOS code (`macos_security`, objc2) cannot be compiled on Windows — CI's macos-latest job is the compile check for it.
 - `app.exit(code)` is the only programmatic way out: `RunEvent::ExitRequested` with `code: None` (Cmd+Q, window close) is prevented. The native Ctrl+Alt+Shift+Q recovery shortcut is always registered before lockdown activates.
-- The updater only checks during lockdown; installation must be handled outside an active session. It requires git tags, `Cargo.toml`, and `tauri.conf.json` versions to agree; releases are cut by pushing a `v*` tag (`.github/workflows/release.yml`).
+- Release builds check for and install signed updates only while Rust still owns the pre-quiz loading phase. Debug builds skip auto-installation. Git tags, `Cargo.toml`, and `tauri.conf.json` versions must agree; releases are cut by pushing a `v*` tag (`.github/workflows/release.yml`).
 - `tauri-plugin-updater` intentionally uses `native-tls` (not the default rustls) so local builds don't need clang for `ring` on Windows ARM64.
