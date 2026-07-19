@@ -467,8 +467,12 @@ fn close_loading_recovery(app: &AppHandle) -> Result<(), String> {
         window.close().map_err(|error| error.to_string())?;
     }
     if let Some(main_win) = app.get_webview_window("main") {
-        let _ = main_win.set_position(tauri::Position::Logical(tauri::LogicalPosition::new(0.0, 0.0)));
-        main_win.set_fullscreen(true).map_err(|error| error.to_string())?;
+        let _ = main_win.set_position(tauri::Position::Logical(tauri::LogicalPosition::new(
+            0.0, 0.0,
+        )));
+        main_win
+            .set_fullscreen(true)
+            .map_err(|error| error.to_string())?;
         let _ = main_win.set_focus();
     }
     Ok(())
@@ -692,8 +696,7 @@ fn main() {
                     .position(sidebar_w, 0.0)
                     .inner_size(main_w, screen_h);
             } else {
-                main_builder = main_builder
-                    .fullscreen(config.window.fullscreen);
+                main_builder = main_builder.fullscreen(config.window.fullscreen);
             }
 
             let _window = main_builder.build()?;
